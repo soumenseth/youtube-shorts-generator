@@ -1,5 +1,12 @@
 import os
 import sys
+
+# Ensure Unicode output works on Windows terminals with non-UTF-8 codepages
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from dotenv import load_dotenv
 from managers.pipeline_factory import PipelineFactory
 from agents.orchestrator import OrchestratorAgent

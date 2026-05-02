@@ -87,7 +87,7 @@ class OrchestratorAgent(BaseAgent):
     def _handle_tool(self, name: str, inputs: dict) -> dict:
         if name == "analyze_script":
             analysis = self._pipeline.analyze_script(inputs["script"])
-            print(f"[Orchestrator] ✓ Script analyzed: {analysis.video_type} | {analysis.visual_style} | {analysis.video_format}")
+            print(f"[Orchestrator] + Script analyzed: {analysis.video_type} | {analysis.visual_style} | {analysis.video_format}")
             get_client().update_current_span(
                 metadata={
                     "video_type": analysis.video_type.value,
@@ -101,21 +101,21 @@ class OrchestratorAgent(BaseAgent):
         if name == "plan_video":
             analysis = ScriptAnalysis(**inputs["analysis"])
             plan = self._pipeline.plan_video(inputs["script"], analysis)
-            print(f"[Orchestrator] ✓ Video planned: {len(plan.scenes)} scenes, {plan.total_duration_seconds}s")
+            print(f"[Orchestrator] + Video planned: {len(plan.scenes)} scenes, {plan.total_duration_seconds}s")
             return plan.model_dump()
 
         if name == "review_and_approve_plan":
             plan = VideoPlan(**inputs["plan"])
-            print("[Orchestrator] ↻ Running 3-round quality review...")
+            print("[Orchestrator] ~ Running 3-round quality review...")
             approved, reviews = self._pipeline.review_plan(inputs["script"], plan)
             scores = [r.overall_score for r in reviews]
-            print(f"[Orchestrator] ✓ Review complete. Scores: {scores}")
+            print(f"[Orchestrator] + Review complete. Scores: {scores}")
             return approved.model_dump()
 
         if name == "generate_and_assemble_video":
             plan = VideoPlan(**inputs["plan"])
             result = self._pipeline.generate_video(plan, self._output_path)
-            print(f"[Orchestrator] ✓ Video generated: {result}")
+            print(f"[Orchestrator] + Video generated: {result}")
             get_client().update_current_span(output={"video_path": result})
             return {"output_path": result, "status": "success"}
 

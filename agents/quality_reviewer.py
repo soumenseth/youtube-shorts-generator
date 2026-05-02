@@ -112,18 +112,31 @@ Be specific in your improvements. Call submit_review to return your assessment.{
         # Merge preserved fields into revised_plan if provided
         if review_data.get("revised_plan"):
             rp = review_data["revised_plan"]
-            for field in ("video_type", "visual_style", "video_format", "target_audience"):
-                if field not in rp:
+
+            # Model sometimes returns revised_plan as a JSON string instead of a dict
+            if isinstance(rp, str):
+                import json as _json
+                try:
+                    rp = _json.loads(rp)
+                    review_data["revised_plan"] = rp
+                except Exception:
+                    review_data.pop("revised_plan", None)
+                    rp = None
+
+            if isinstance(rp, dict):
+                # Always force-set preserved fields — prevents enum repr strings
+                # (e.g. 'VideoType.EDUCATIONAL') that the model sometimes returns
+                for field in ("video_type", "visual_style", "video_format", "target_audience"):
                     val = getattr(plan, field)
                     rp[field] = val.value if hasattr(val, "value") else val
-            if "scenes" in rp and "total_duration_seconds" not in rp:
-                rp["total_duration_seconds"] = sum(
-                    s.get("duration_seconds", 5) for s in rp["scenes"]
-                )
-            for field in ("title", "description", "hook", "background_music_style",
-                          "call_to_action", "thumbnail_concept"):
-                if field not in rp:
-                    rp[field] = getattr(plan, field)
+                if "scenes" in rp and "total_duration_seconds" not in rp:
+                    rp["total_duration_seconds"] = sum(
+                        s.get("duration_seconds", 5) for s in rp["scenes"]
+                    )
+                for field in ("title", "description", "hook", "background_music_style",
+                              "call_to_action", "thumbnail_concept"):
+                    if field not in rp:
+                        rp[field] = getattr(plan, field)
 
         try:
             review = QualityReview(round_number=round_number, **review_data)
@@ -164,19 +177,19 @@ Be specific in your improvements. Call submit_review to return your assessment.{
             review = self.review(script, current, rnd, prev_reviews=history)
             history.append(review)
 
-            bar = "█" * (review.overall_score // 10) + "░" * (10 - review.overall_score // 10)
+            bar = "#" * (review.overall_score // 10) + "-" * (10 - review.overall_score // 10)
             print(f"  Score: {review.overall_score}/100 [{bar}]  Approved: {review.approved}")
-            print(f"  ✓ {' | '.join(review.strengths[:2])}")
-            print(f"  ✗ {' | '.join(review.weaknesses[:2])}")
+            print(f"  + {' | '.join(review.strengths[:2])}")
+            print(f"  - {' | '.join(review.weaknesses[:2])}")
 
             if review.revised_plan:
                 current = review.revised_plan
-                print("  ↻ Plan revised")
+                print("  ~ Plan revised")
 
         final_score = history[-1].overall_score
         print(f"\n  Final score after 3 reviews: {final_score}/100")
         if final_score < 60:
-            print("  ⚠ Score below 60 — proceeding with best available plan")
+            print("  ! Score below 60 -- proceeding with best available plan")
 
         get_client().score_current_span(
             name="final_quality_score",
